@@ -6,6 +6,7 @@ using ProcessMemoryDataFinder.Misc;
 
 namespace ProcessMemoryDataFinder.API
 {
+    //Slightly modified (by Milkitic) signature scanner (reduce GC)
     //Slightly modified (by Piotrekol) signature scanner (added ability of scanning memory without need of mask usage)
     //
     //Original changelog and credits follow:

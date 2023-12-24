@@ -58,6 +58,7 @@ namespace ProcessMemoryDataFinder.API
         /// </summary>
         private byte[] m_vDumpedRegion;
 
+        private bool m_vDumpedRegionInitialized = false;
         /// <summary>
         /// m_vProcess
         /// 
@@ -117,7 +118,7 @@ namespace ProcessMemoryDataFinder.API
         #endregion
 
         #region "sigScan Class Private Methods"
-        
+
         /// <summary>
         /// DumpMemory
         /// 
@@ -140,7 +141,7 @@ namespace ProcessMemoryDataFinder.API
                     return false;
 
                 // Create the region space to dump into.
-                m_vDumpedRegion = new byte[m_vSize];
+                CreateRegionBuffer();
 
                 bool bReturn = false;
                 int nBytesRead = 0;
@@ -159,6 +160,20 @@ namespace ProcessMemoryDataFinder.API
             {
                 return false;
             }
+        }
+
+        private void CreateRegionBuffer()
+        {
+            if (m_vDumpedRegion == null)
+            {
+                m_vDumpedRegion = new byte[m_vSize];
+            }
+            else if (m_vDumpedRegion.Length < m_vSize)
+            {
+                m_vDumpedRegion = new byte[m_vSize];
+            }
+
+            m_vDumpedRegionInitialized = true;
         }
 
         /// <summary>
@@ -208,7 +223,7 @@ namespace ProcessMemoryDataFinder.API
             try
             {
                 // Dump the memory region if we have not dumped it yet.
-                if (m_vDumpedRegion == null || m_vDumpedRegion.Length == 0)
+                if (!m_vDumpedRegionInitialized)
                 {
                     if (!DumpMemory())
                         return IntPtr.Zero;
@@ -219,7 +234,7 @@ namespace ProcessMemoryDataFinder.API
                     return IntPtr.Zero;
 
                 // Loop the region and look for the pattern.
-                for (int x = 0; x < m_vDumpedRegion.Length; x++)
+                for (int x = 0; x < m_vSize; x++)
                 {
                     if (MaskCheck(x, btPattern, strMask))
                     {
@@ -250,7 +265,7 @@ namespace ProcessMemoryDataFinder.API
             try
             {
                 // Dump the memory region if we have not dumped it yet.
-                if (m_vDumpedRegion == null || m_vDumpedRegion.Length == 0)
+                if (!m_vDumpedRegionInitialized)
                 {
                     if (!DumpMemory())
                         return;
@@ -259,13 +274,13 @@ namespace ProcessMemoryDataFinder.API
                 // Ensure the mask and pattern lengths match.
                 foreach (var sig in SigQueue)
                 {
-                    if(sig.Mask.Length != sig.Pattern.Length)
+                    if (sig.Mask.Length != sig.Pattern.Length)
                         return;
                 }
-                
+
 
                 // Loop the region and look for the patterns.
-                for (int x = 0; x < m_vDumpedRegion.Length; x++)
+                for (int x = 0; x < m_vSize; x++)
                 {
                     foreach (var sig in m_SigQueue)
                     {
@@ -291,7 +306,7 @@ namespace ProcessMemoryDataFinder.API
         /// </summary>
         public void ResetRegion()
         {
-            m_vDumpedRegion = null;
+            m_vDumpedRegionInitialized = false;
         }
         #endregion
 
@@ -324,19 +339,19 @@ namespace ProcessMemoryDataFinder.API
         public IntPtr FindPattern(byte[] patternBytes, int nOffset)
         {
             // Dump the memory region if we have not dumped it yet.
-            if (m_vDumpedRegion == null || m_vDumpedRegion.Length == 0)
+            if (!m_vDumpedRegionInitialized)
             {
                 if (!DumpMemory())
                     return IntPtr.Zero;
             }
-            var result = Scan(m_vDumpedRegion, patternBytes);
+            var result = Scan(m_vDumpedRegion, m_vSize, patternBytes);
             if (result == -1)
                 return IntPtr.Zero;
 
             return m_vAddress + (nOffset + result);
         }
 
-        private static int Scan(byte[] sIn, byte[] sFor)
+        private static int Scan(byte[] sIn, int sInLen, byte[] sFor)
         {
             if (sIn == null)
             {
@@ -356,7 +371,7 @@ namespace ProcessMemoryDataFinder.API
             }
 
             int pool = 0;
-            while (pool <= sIn.Length - sFor.Length)
+            while (pool <= sInLen - sFor.Length)
             {
                 for (int i = end; (sIn[pool + i] == sFor[i]); i--)
                 {
@@ -372,5 +387,5 @@ namespace ProcessMemoryDataFinder.API
         }
     }
 
-    
+
 }
